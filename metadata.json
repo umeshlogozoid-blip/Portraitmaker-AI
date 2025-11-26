@@ -1,0 +1,5 @@
+{
+  "name": "PortraitMaker AI",
+  "description": "Convert your photos into professional black-and-white vector stencil portraits using Gemini.",
+  "requestFramePermissions": []
+}
