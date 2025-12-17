@@ -1,5 +1,6 @@
+
 import { GoogleGenAI } from "@google/genai";
-import { PortraitOptions } from "../types";
+import { PortraitOptions, ColorMode } from "../types";
 
 const API_KEY = process.env.API_KEY || '';
 
@@ -13,35 +14,45 @@ export const generatePortrait = async (
 
   const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-  // Construct color prompt instructions
-  let colorInstructions = "Color: Pure Black (#000000) only.";
-  if (options.useColor && options.colors && options.colors.length === 3) {
-    colorInstructions = `
-      Color Palette: Use strictly the following 3 colors for the vector shapes: ${options.colors.join(', ')}.
-      - You MAY also use Black (#000000) for deepest shadows or outlines if needed for contrast.
-      - Do NOT use gradients. Use solid flat colors (Pop Art / Poster style).
+  // Color logic
+  let colorInstructions = "";
+  if (options.colorMode === ColorMode.BW) {
+    colorInstructions = "Color: Strictly Pure Black (#000000) on White (#FFFFFF). No other colors.";
+  } else if (options.colorMode === ColorMode.TRIAD) {
+    colorInstructions = `Color Palette: Use strictly these 3 colors: ${options.colors.join(', ')}. Use solid flat shapes (Posterized/Pop-art style).`;
+  } else {
+    colorInstructions = "Color: Full Vibrant Color. Use a rich, diverse palette while maintaining a clean vector/digital illustration style. Bold and saturation-rich.";
+  }
+
+  // Text logic
+  let textInstructions = "";
+  if (options.customText.trim()) {
+    textInstructions = `
+      - Text Integration: Include the text "${options.customText.trim()}" in the image.
+      - Font Style: Use a ${options.fontStyle} aesthetic for the typography.
+      - Placement: Position the text naturally, likely at the bottom center or integrated into the stencil composition.
+      - Consistency: Ensure the text color matches the portrait's color scheme.
     `;
   }
 
-  // Construct the prompt based on user options
   const prompt = `
-    You are PortraitMaker AI.
-    Task: Convert the attached photo into a professional vector-style stencil portrait.
+    You are PortraitMaker AI, a professional digital portrait artist specializing in vector and stencil styles.
     
-    Style Requirements:
-    - Line Style: ${options.lineStyle}
-    - Contrast: ${options.contrastLevel}
-    - Detail: ${options.detailLevel}
-    - Aesthetics: Bold shapes, clean white space. High contrast. Sharp edges.
+    Task: Convert the provided photo into a high-quality stylized portrait.
+    
+    Technical Requirements:
+    - Art Style: Professional Vector/Stencil art. Sharp clean edges, bold shapes.
+    - Line Weight: ${options.lineStyle}.
+    - Contrast: ${options.contrastLevel}.
+    - Complexity: ${options.detailLevel}.
     - ${colorInstructions}
-    - Format: Stencil / Vector art style suitable for T-shirt printing or stickers.
-    - Background: Pure white (hex #FFFFFF). Do not include any background scenery.
-    - Subject: Focus on the head and upper shoulders. Keep facial features accurate and recognizable but stylized.
+    - Background: Solid Pure White (#FFFFFF). No background objects or scenery.
+    - Subject: Head and shoulders portrait. Maintain the likeness and character of the person.
+    ${textInstructions}
     
-    Output Instructions:
-    - Do not add any text, signatures, or logos.
-    - Do not distort the face.
-    - Return ONLY the generated image.
+    Output Format:
+    - Return ONLY the generated image. 
+    - No photographic elements; the result must be clearly artistic/vectorized.
   `;
 
   try {
@@ -49,12 +60,10 @@ export const generatePortrait = async (
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
-          {
-            text: prompt,
-          },
+          { text: prompt },
           {
             inlineData: {
-              mimeType: 'image/jpeg', // Assuming JPEG for simplicity
+              mimeType: 'image/jpeg',
               data: imageBase64,
             },
           },
@@ -62,23 +71,18 @@ export const generatePortrait = async (
       },
     });
 
-    // Extract the image from the response
     let generatedImageBase64 = null;
-
-    if (response.candidates && response.candidates.length > 0) {
-      const content = response.candidates[0].content;
-      if (content && content.parts) {
-        for (const part of content.parts) {
-          if (part.inlineData && part.inlineData.data) {
-            generatedImageBase64 = part.inlineData.data;
-            break; // Found the image
-          }
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData?.data) {
+          generatedImageBase64 = part.inlineData.data;
+          break;
         }
       }
     }
 
     if (!generatedImageBase64) {
-      throw new Error("No image was generated. The model might have returned text instead.");
+      throw new Error("The AI did not generate an image. It might have responded with text instead due to content filters.");
     }
 
     return generatedImageBase64;

@@ -1,3 +1,4 @@
+
 export enum LineStyle {
   THICK = 'Thick Lines',
   MEDIUM = 'Medium Lines',
@@ -16,16 +17,32 @@ export enum DetailLevel {
   DETAILED = 'Detailed',
 }
 
+export enum ColorMode {
+  BW = 'Black & White',
+  TRIAD = '3-Color Triad',
+  FULL = 'Full Color',
+}
+
+export enum FontStyle {
+  SANS = 'Modern Sans',
+  SERIF = 'Classic Serif',
+  SCRIPT = 'Elegant Script',
+  BOLD = 'Bold Impact',
+  MINIMAL = 'Minimalist',
+}
+
 export interface PortraitOptions {
   lineStyle: LineStyle;
   contrastLevel: ContrastLevel;
   detailLevel: DetailLevel;
-  useColor: boolean;
-  colors: [string, string, string]; // Fixed 3 colors
+  colorMode: ColorMode;
+  colors: [string, string, string];
+  customText: string;
+  fontStyle: FontStyle;
 }
 
 export interface GenerationState {
   isGenerating: boolean;
   error: string | null;
-  resultImage: string | null; // Base64 or URL
+  resultImage: string | null;
 }
